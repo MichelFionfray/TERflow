@@ -1,0 +1,36 @@
+// pseudo-code for the update function, assuming that G is acyclic :
+update(e, new_value) :
+  old_value ← e.value
+  e.value ← new_value
+  if e is not a source edge, then
+    n ← e.x // origin node
+    W_coef ← pointer to n.W_coef // conversion matrix
+    W_abs ← pointer to n.W_abs // conversion matrix expressed in terms of absolute contributions
+    // (W_abs is assumed to be computed along with W_coef at initiatialization)
+    edges_in ← n.edges_in
+    edges_out ← n.edges_out
+    coef_old_new ← new_value/old_value
+    ei_new_values ← new vector of |edges_in| floats
+    for each ei of edges_in, do
+      new_abs ← W_abs(e.num, ei.num)*coef_old_new // new absolute contribution from ei to e
+      ei_new_values(ei.num) ← ei.value - W_abs(e.num, ei.num) + new_abs // new value for ei
+      // (we could recurse at this point but it is clearer to do at the end)
+      W_abs(e.num, ei.num) ← new_abs
+    done
+    // update the coefficients for every output edge :
+    for each eo of edges_out, do
+      for each ei of edges_in, do
+        W_coef(eo.num, ei.num) ← W_abs(eo.num, ei.num)/ei_new_values(ei)
+      done
+    done
+    // and recurse on each input edge :
+    for each ei of edges_in, do
+      update(ei, ei_new_values(ei.num))
+  endif
+  // if e is a source edge, we need not propagate anything
+end
+
+// main call, with e being our "edge of interest" :
+for each b in e.boundary \ {e}, do
+  update(b, 0)
+done
