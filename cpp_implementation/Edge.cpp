@@ -10,14 +10,22 @@ Edge::Edge(Node* x, Node* y, int color, float value) {
   this->y = y;
   this->color = color;
   this->value = value;
+  this->num_out = x->get_deg_out();
+  this->num_in = y->get_deg_in();
+  x->add_edge_out(this);
+  y->add_edge_in(this);
+  // there is a correspondance bewteen in/out nums (which serve as indices in
+  // conversion matrices) and the edge position in the edge_in/out vectors of x and y.
+  // thus, for example, to access the input edge of element (i,j) in w(n),
+  // we can just do n.get_edges_in()->at(j)
 }
 
-State Edge::get_state() {
-  return state;
+bool Edge::get_is_ancestor() {
+  return is_ancestor;
 }
 
-void Edge::set_state(State s) {
-  state = s;
+void Edge::set_is_ancestor(bool b) {
+  is_ancestor = b;
 }
 
 std::vector<Edge*>* Edge::get_proper_ancestors() {
@@ -50,7 +58,23 @@ int Edge::get_color() {
   return color;
 }
 
+int Edge::get_num_out() {
+  return num_out;
+}
+
+int Edge::get_num_in() {
+  return num_in;
+}
+
+float Edge::get_value() {
+  return value;
+}
+
+void Edge::set_value(float v) {
+  value = v;
+}
+
 void Edge::print() {
-  printf("Edge from %d to %d, color = %d, value = %f\n",
-         x->get_id(), y->get_id(), color, value);
+  printf("Edge from %d (num_out=%d) to %d (num_in=%d), color = %d, value = %f\n",
+         x->get_id(), num_out, y->get_id(), num_in, color, value);
 }

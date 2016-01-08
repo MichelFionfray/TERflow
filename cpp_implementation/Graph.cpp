@@ -23,14 +23,18 @@ Node* Graph::get_node_by_id(int id) {
     return 0;
 }
 
+Node* Graph::get_node_by_id_seq(int id) {
+  // assumes that for every node n, n.id = position of n in nodes
+  // (depends on how the graph has been constructed)
+  return nodes.at(id);
+}
+
 Edge* Graph::add_edge(int id_x, int id_y, int color, float value) {
   Node* x = get_node_by_id(id_x);
   Node* y = get_node_by_id(id_y);
   if(x && y) {
     Edge* e = new Edge(x, y, color, value);
     edges.push_back(e);
-    x->add_edge_out(e);
-    y->add_edge_in(e);
     return e;
   }
   else
@@ -46,14 +50,8 @@ void Graph::add_nodes_range(int id_start, int id_end) {
     nodes.push_back(new Node(id));
 }
 
-void Graph::make_random_balanced() {
-  // set random values for each edge, so that G has a balanced value
-  // sets W matrix values accordingly
-}
-
 void Graph::compute_AB(Edge* e) {
   reset_nodes();
-  reset_edges();
   // compute proper ancestors + source ancestors
   std::vector<Edge*>* ancestors = e->get_proper_ancestors();
   std::vector<Edge*>* source_ancestors = e->get_source_ancestors();
@@ -68,8 +66,8 @@ void Graph::compute_AB(Edge* e) {
     std::vector<Edge*>* edges_in = n->get_edges_in();
     std::vector<Edge*>::iterator it1 = edges_in->begin();
     for(; it1 != edges_in->end(); ++it1) {
-      if(!(*it1)->is_equal(e)) {
-        (*it1)->set_state(BLACK); // tag as ancestor for boundary calculation
+      if(! (*it1)->is_equal(e)) {
+        (*it1)->set_is_ancestor(true); // tag as ancestor for boundary calculation
         if((*it1)->get_x()->get_deg_in() == 0) // the edge is also a source
           source_ancestors->push_back(*it1);
         ancestors->push_back(*it1);
@@ -87,7 +85,7 @@ void Graph::compute_AB(Edge* e) {
     n->set_state(BLACK); // tag current node as visited
   }
   // compute boundary :
-  // loop over visited nodes, pick up out-edges that are not tagged as ancestors
+  // for each visited nodes, pick up out edges that are not tagged as ancestors
   std::vector<Edge*>* boundary = e->get_boundary();
   std::vector<Node*>::iterator it3 = nodes.begin();
   for(; it3 != nodes.end(); ++it3) {
@@ -95,10 +93,52 @@ void Graph::compute_AB(Edge* e) {
       std::vector<Edge*>* edges_out = (*it3)->get_edges_out();
       std::vector<Edge*>::iterator it4 = edges_out->begin();
       for(; it4 != edges_out->end(); ++it4) {
-        if((*it4)->get_state() != BLACK)
+        if(! (*it4)->get_is_ancestor())
           boundary->push_back(*it4);
       }
     }
+  }
+}
+
+void Graph::cancel_boundary(Edge* e) {
+  // assuming G acyclic
+  std::vector<Edge*>::iterator it = e->get_boundary()->begin();
+  for(; it != e->get_boundary()->end(); ++it) {
+    if(! (*it)->is_equal(e))
+      update((*it), 0.);
+  }
+}
+
+void Graph::update(Edge* e, float new_value) {
+  float old_value = e->get_value();
+  e->set_value(new_value);
+  Node* n = e->get_x();
+  if(n->get_deg_in() > 0) {
+    arma::fmat* w_coef = n->get_w_coef();
+    arma::fmat* w_abs = n->get_w_abs();
+    std::vector<Edge*>* edges_in = n->get_edges_in();
+    std::vector<Edge*>* edges_out = n->get_edges_out();
+    float coef_old_new = new_value/old_value;
+    std::vector<float> ei_new_values(n->get_deg_in());
+    std::vector<Edge*>::iterator it = edges_in->begin();
+    for(; it != edges_in->end(); ++it) {
+      int i = e->get_num_out();
+      int j = (*it)->get_num_in();
+      float new_abs = (*w_abs)(i, j) * coef_old_new;
+      ei_new_values.at(j) = (*it)->get_value() - (*w_abs)(i, j) + new_abs;
+      (*w_abs)(i, j) = new_abs;
+    }
+    std::vector<Edge*>::iterator it1 = edges_out->begin();
+    std::vector<Edge*>::iterator it2;
+    for(; it1 != edges_out->end(); ++it1) {
+      for(it2 = edges_in->begin(); it2 != edges_in->end(); ++it2) {
+        int i = (*it1)->get_num_out();
+        int j = (*it2)->get_num_in();
+        (*w_coef)(i, j) = (*w_abs)(i, j) / ei_new_values.at(j);
+      }
+    }
+    for(it = edges_in->begin(); it != edges_in->end(); ++it)
+      update((*it), ei_new_values.at((*it)->get_num_in()));
   }
 }
 
@@ -136,14 +176,6 @@ void Graph::print_DFS_aux(Node* n) {
 void Graph::reset_nodes() {
   std::vector<Node*>::iterator it = nodes.begin();
   while(it != nodes.end()) {
-    (*it)->set_state(WHITE);
-    ++ it;
-  }
-}
-
-void Graph::reset_edges() {
-  std::vector<Edge*>::iterator it = edges.begin();
-  while(it != edges.end()) {
     (*it)->set_state(WHITE);
     ++ it;
   }

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <vector>
 #include <string>
+#include <armadillo>
 #include "Node.hpp"
 #include "Edge.hpp"
 #include "enum.hpp"
@@ -77,6 +78,26 @@ void Node::add_edge_out(Edge* out) {
 
 bool Node::is_equal(Node* n) {
   return (id == n->get_id());
+}
+
+void Node::set_w_coef(arma::fmat w) {
+  w_coef = w;
+  // also fill w_abs (use iterators instead?)
+  w_abs.set_size(w.n_rows, w.n_cols);
+  for(int i = 0; i < w.n_rows; ++i) {
+    for(int j = 0; j < w.n_cols; ++j) {
+      float in_val = edges_in.at(j)->get_value();
+      w_abs(i, j) = w_coef(i, j) * in_val;
+    }
+  }
+}
+
+arma::fmat* Node::get_w_coef() {
+  return &w_coef;
+}
+
+arma::fmat* Node::get_w_abs() {
+  return &w_abs;
 }
 
 void Node::print() {

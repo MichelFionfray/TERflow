@@ -11,16 +11,18 @@ class Edge {
 private:
   Node* x;
   Node* y;
-  State state;
   int color;
   float value;
+  int num_out;
+  int num_in;
+  bool is_ancestor;
   std::vector<Edge*> proper_ancestors;
   std::vector<Edge*> boundary;
   std::vector<Edge*> source_ancestors;
 public:
   Edge(Node* x, Node* y, int color, float value);
-  State get_state();
-  void set_state(State s);
+  bool get_is_ancestor();
+  void set_is_ancestor(bool b);
   std::vector<Edge*>* get_proper_ancestors();
   std::vector<Edge*>* get_boundary();
   std::vector<Edge*>* get_source_ancestors();
@@ -28,6 +30,10 @@ public:
   Node* get_x();
   Node* get_y();
   int get_color();
+  int get_num_out();
+  int get_num_in();
+  float get_value();
+  void set_value(float v);
   void print();
 };
 
