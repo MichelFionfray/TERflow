@@ -82,7 +82,7 @@ bool Node::is_equal(Node* n) {
 
 void Node::set_w_coef(arma::fmat w) {
   w_coef = w;
-  // also fill w_abs (use iterators instead?)
+  // also fill w_abs
   w_abs.set_size(w.n_rows, w.n_cols);
   for(int i = 0; i < w.n_rows; ++i) {
     for(int j = 0; j < w.n_cols; ++j) {
@@ -97,6 +97,8 @@ arma::fmat* Node::get_w_coef() {
 }
 
 arma::fmat* Node::get_w_abs() {
+  // assume absolute contributions have already been computed by set_w_coef
+  // (add boolean arg to allow re-computation?)
   return &w_abs;
 }
 

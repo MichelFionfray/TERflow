@@ -19,9 +19,9 @@ public:
   Edge* add_edge(int id_x, int id_y, int color, float value);
   void add_node(int id);
   void add_nodes_range(int id_start, int id_end);
-  void compute_AB(Edge* e);
-  void cancel_boundary(Edge* e);
-  void update(Edge* e, float new_value);
+  void compute_ancestors_boundary(Edge* e);
+  std::vector<float> cancel_boundary_acyclic(Edge* e);
+  void update_acyclic(Edge* e, float new_value);
   void compute_sources();
   void print_DFS();
   void print_DFS_aux(Node* n);
@@ -29,6 +29,7 @@ public:
   void reset_edges();
   void print_nodes_vec(std::vector<Node*>* v);
   void print_edges_vec(std::vector<Edge*>* v);
+  void print_float_vec(std::vector<float>* v);
 };
 
 #endif

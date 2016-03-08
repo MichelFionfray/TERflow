@@ -5,6 +5,11 @@
 #include "Node.hpp"
 #include "enum.hpp"
 
+
+//----------------------//
+// access & build graph //
+//----------------------//
+
 std::vector<Edge*>* Graph::get_edges() {
   return &edges;
 }
@@ -50,9 +55,52 @@ void Graph::add_nodes_range(int id_start, int id_end) {
     nodes.push_back(new Node(id));
 }
 
-void Graph::compute_AB(Edge* e) {
+
+//------------------//
+// basic algorithms //
+//------------------//
+
+// standard recursive DFS to print the graph
+void Graph::print_DFS() {
   reset_nodes();
-  // compute proper ancestors + source ancestors
+  std::vector<Node*>::iterator it = nodes.begin();
+  for(; it != nodes.end(); ++it) {
+    if((*it)->get_state() == WHITE)
+      print_DFS_aux(*it);
+  }
+}
+
+// auxiliary DFS function
+void Graph::print_DFS_aux(Node* n) {
+  n->set_state(GRAY);
+  n->print();
+  std::vector<Node*>* children = n->get_children();
+  std::vector<Node*>::iterator it = children->begin();
+  for(; it != children->end(); ++it) {
+    if((*it)->get_state() == WHITE)
+      print_DFS_aux(*it);
+  }
+  n->set_state(BLACK);
+}
+
+// find source nodes
+void Graph::compute_sources() {
+  std::vector<Node*>::iterator it = nodes.begin();
+  while(it != nodes.end()) {
+    if((*it)->get_deg_in() == 0)
+      sources.push_back(*it);
+    ++ it;
+  }
+}
+
+
+//---------------------//
+// relevant algorithms //
+//---------------------//
+
+// compute proper ancestors + source ancestors + edge boundary
+void Graph::compute_ancestors_boundary(Edge* e) {
+  reset_nodes();
   std::vector<Edge*>* ancestors = e->get_proper_ancestors();
   std::vector<Edge*>* source_ancestors = e->get_source_ancestors();
   std::stack<Node*> stack;
@@ -100,16 +148,28 @@ void Graph::compute_AB(Edge* e) {
   }
 }
 
-void Graph::cancel_boundary(Edge* e) {
-  // assuming G acyclic
+// boundary cancellation for the acyclic case, returns the source decomposition
+std::vector<float> Graph::cancel_boundary_acyclic(Edge* e) {
+  std::vector<float> init_values;
+  std::vector<Edge*>* a = e->get_source_ancestors();
+  for(int i = 0; i < a->size(); i++)
+    init_values.push_back(a->at(i)->get_value());
+
   std::vector<Edge*>::iterator it = e->get_boundary()->begin();
   for(; it != e->get_boundary()->end(); ++it) {
     if(! (*it)->is_equal(e))
-      update((*it), 0.);
+      update_acyclic((*it), 0.);
   }
+
+  std::vector<float> c;
+  for(int i = 0; i < a->size(); i++)
+    c.push_back(a->at(i)->get_value() / init_values.at(i));
+
+  return c;
 }
 
-void Graph::update(Edge* e, float new_value) {
+// propagate the cancellation of a boundary edge in terms of conversion matrices
+void Graph::update_acyclic(Edge* e, float new_value) {
   float old_value = e->get_value();
   e->set_value(new_value);
   Node* n = e->get_x();
@@ -138,41 +198,16 @@ void Graph::update(Edge* e, float new_value) {
       }
     }
     for(it = edges_in->begin(); it != edges_in->end(); ++it)
-      update((*it), ei_new_values.at((*it)->get_num_in()));
+      update_acyclic((*it), ei_new_values.at((*it)->get_num_in()));
   }
 }
 
-void Graph::compute_sources() {
-  std::vector<Node*>::iterator it = nodes.begin();
-  while(it != nodes.end()) {
-    if((*it)->get_deg_in() == 0)
-      sources.push_back(*it);
-    ++ it;
-  }
-}
 
-// standard recursive DFS
-void Graph::print_DFS() {
-  reset_nodes();
-  std::vector<Node*>::iterator it = nodes.begin();
-  for(; it != nodes.end(); ++it) {
-    if((*it)->get_state() == WHITE)
-      print_DFS_aux(*it);
-  }
-}
+//-------//
+// utils //
+//-------//
 
-void Graph::print_DFS_aux(Node* n) {
-  n->set_state(GRAY);
-  n->print();
-  std::vector<Node*>* children = n->get_children();
-  std::vector<Node*>::iterator it = children->begin();
-  for(; it != children->end(); ++it) {
-    if((*it)->get_state() == WHITE)
-      print_DFS_aux(*it);
-  }
-  n->set_state(BLACK);
-}
-
+// reset nodes states to WHITE (unvisited)
 void Graph::reset_nodes() {
   std::vector<Node*>::iterator it = nodes.begin();
   while(it != nodes.end()) {
@@ -181,14 +216,24 @@ void Graph::reset_nodes() {
   }
 }
 
+// print any vector<Node*>
 void Graph::print_nodes_vec(std::vector<Node*>* v) {
   std::vector<Node*>::iterator it = v->begin();
   for(; it != v->end(); ++it)
     (*it)->print();
 }
 
+// print any vector<Edge*>
 void Graph::print_edges_vec(std::vector<Edge*>* v) {
   std::vector<Edge*>::iterator it = v->begin();
   for(; it != v->end(); ++it)
     (*it)->print();
+}
+
+// print any vector<float>
+void Graph::print_float_vec(std::vector<float>* v) {
+  std::vector<float>::iterator it = v->begin();
+  for(; it != v->end(); ++it)
+    printf("%f; ", *it);
+  printf("\n");
 }

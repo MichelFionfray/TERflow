@@ -15,7 +15,7 @@ Edge::Edge(Node* x, Node* y, int color, float value) {
   x->add_edge_out(this);
   y->add_edge_in(this);
   // there is a correspondance bewteen in/out nums (which serve as indices in
-  // conversion matrices) and the edge position in the edge_in/out vectors of x and y.
+  // conversion matrices) and the edge position in the edge_in/out vectors of y and x.
   // thus, for example, to access the input edge of element (i,j) in w(n),
   // we can just do n.get_edges_in()->at(j)
 }
